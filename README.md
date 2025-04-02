@@ -1,68 +1,69 @@
-# 🧠 CS6320 AI Chatbot for Python Library Support
+# 🤖 CS6320 Project: Python Library Chatbot using RAG
 
-An intelligent, conversational chatbot designed to help users improve their coding skills through natural language interaction. Our project uses **Retrieval Augmented Generation (RAG)** to provide relevant documentation, explain code, suggest libraries, and help debug Python programs.
-
----
-
-## 🚀 About the Project
-
-Our chatbot helps users learn and code smarter by engaging them in real-time conversations. Using a combination of natural language processing (NLP), semantic search, and generative AI, it pulls accurate and context-aware information from Python documentation.
-
-It is built with:
-
-- **Retrieval Augmented Generation (RAG)**
-- **Vector search over library documentation**
-- **Transformer models for understanding and generating text/code**
+An intelligent chatbot designed to help users improve their coding skills through natural conversation. The bot retrieves accurate documentation and suggestions using **Retrieval Augmented Generation (RAG)** — combining NLP and a Python knowledge base to offer context-aware, interactive help.
 
 ---
 
-## 🎯 Goals
+## 🧠 About the Project
 
-- **Interactive Learning:** Engage users in meaningful, real-world programming conversations
-- **Library Assistance:** Suggest Python libraries based on user needs and queries
-- **Programming Correction:** Help debug and optimize user code with explanations
+Our project is an intelligent chatbot that helps users improve their coding skills through conversation practice and interaction. It provides users with information from the relevant documentation using **Retrieval Augmented Generative (RAG)** models, pulling data from a knowledge base of Python library documentation to ensure accurate and context-aware responses.
 
 ---
 
-## 🔍 Features
+## 🎯 Goal
 
-- ✅ Conversational chatbot interface
-- ✅ Python library recommendation via semantic search
-- ✅ Inline code correction and suggestions
-- ✅ Top 3 document match display with citations
-- ✅ Clean and modern frontend UI (built with Next.js)
-- ✅ One-stop Python library assistance for beginners and intermediate coders
+Our goal is to fulfill these three key features that assist users in everyday learning:
 
----
-
-## 📚 NLP Pipeline Overview
-
-1. **Intent Detection:** Classifies the user's question type (learn/help/debug)
-2. **Query Embedding:** Embeds user input using `sentence-transformers`
-3. **Document Retrieval:** Searches vector DB (e.g., FAISS/Chroma) for relevant Python docs
-4. **RAG Generation:** Uses a language model to generate a context-aware response
-5. **Code Correction (optional):** Parses and refines user-submitted code
+- **Interactive Learning:** Engages users in real-world conversation
+- **Library Assistance:** Recommends Python libraries based on user needs
+- **Programming Correction:** Helps users troubleshoot and resolve code-related questions
 
 ---
 
-## 🛠️ Tech Stack
+## 📌 Scope
 
-| Layer      | Tools/Frameworks                                |
-| ---------- | ----------------------------------------------- |
-| Frontend   | Next.js, Tailwind CSS                           |
-| Backend    | FastAPI / Flask (for chatbot API)               |
-| NLP Models | HuggingFace Transformers, Sentence Transformers |
-| Retrieval  | FAISS / ChromaDB                                |
-| Generator  | OpenAI GPT / Mistral / Local LLMs via LangChain |
-| Parsing    | AST, Tree-sitter, Python's `ast` module         |
+- ### 🖼 More Prettier UI
+
+  - Build a clean, user-friendly interface using **Next.js**
+
+- ### 📚 One-Stop Shop for Python Library
+
+  - The bot can handle any popular Python library and recommend it to users based on their queries
+
+- ### ⚙️ Check Program Efficiency
+  - Choose the **top 3 best documents** based on user inquiry
+  - AI will provide suggestions with explanation based on retrieved content
 
 ---
 
-## 📦 Installation
+## 👥 Team Members Responsibilities
+
+- Collaboratively implement Retrieval Augmented Generation to improve the model's accuracy
+- Handle ongoing issues and errors during development
+- Integrate vector database APIs to support document retrieval
+- Spread out and combine data gathering responsibilities
+- Use **Databricks** for data aggregation and cleaning
+
+---
+
+## 📦 Tech Stack
+
+| Layer      | Tools/Frameworks                                  |
+| ---------- | ------------------------------------------------- |
+| UI         | Next.js                                           |
+| Backend    | FastAPI / Flask                                   |
+| Retrieval  | FAISS / ChromaDB                                  |
+| Embedding  | Sentence Transformers (`all-MiniLM-L6-v2`)        |
+| Generation | OpenAI GPT / Local LLMs via LangChain or Haystack |
+| Data Tools | Databricks, Pandas, Python                        |
+
+---
+
+## 🛠️ Setup Instructions
 
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/hxt200010/cs6320_project.git
+git clone https://github.com/yourusername/cs6320_project.git
 cd cs6320_project
 ```

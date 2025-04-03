@@ -125,7 +125,11 @@ To use OpenAI’s GPT models for answering questions, you'll need to generate an
 
 ## 🚀 Setup Instructions
 
-1. Clone the repository:
+1. Install Jupyter Notebook if not done: https://jupyter.org/
+
+2. Go to openai and get api key: https://platform.openai.com/settings/organization/api-keys
+
+3. Clone the repository:
    ```bash
    git clone https://github.com/yourusername/python-rag-chatbot.git
    cd python-rag-chatbot

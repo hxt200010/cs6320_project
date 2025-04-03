@@ -133,6 +133,6 @@ To use OpenAI’s GPT models for answering questions, you'll need to generate an
 
 4. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/python-rag-chatbot.git
+   git clone https://github.com/yourusername/cs6320_project.git
    cd python-rag-chatbot
    ```

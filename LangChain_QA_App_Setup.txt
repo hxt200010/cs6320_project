@@ -1,0 +1,100 @@
+
+🚀 Python LangChain QA App with Next.js Frontend
+===============================================
+
+This guide walks you through setting up a Python backend with FastAPI and a Next.js frontend.
+
+📁 Folder Structure
+--------------------
+cs6320_project/
+├── backend/
+│   ├── main.py
+│   ├── .env
+│   ├── python-3.13-docs-text.zip
+│   └── venv/
+└── frontend/
+    └── app/
+        └── page.tsx
+
+🛠 Backend Setup (FastAPI + LangChain)
+-------------------------------------
+
+1. Open terminal and navigate to your project:
+   cd "C:\Users\<your_username>\OneDrive\Documents\UTDallas\Spring 2025\CS 6320\cs6320_project"
+
+2. Create the backend folder if you haven’t already:
+   mkdir backend
+   cd backend
+
+3. Set up virtual environment:
+   python -m venv venv
+   venv\Scripts\activate
+
+4. Install required dependencies:
+   pip install fastapi uvicorn langchain langchain-openai openai faiss-cpu python-dotenv
+
+5. Place your ZIP file `python-3.13-docs-text.zip` inside the `backend/` folder.
+
+6. Option 1 (Recommended): Create a `.env` file and add your OpenAI API key:
+
+   File: backend/.env
+   -------------------------------------
+   OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+   -------------------------------------
+
+   OR
+
+   Option 2 (Quick run): Use this command to export the API key and start the server:
+
+   PowerShell:
+   -------------------------------------
+   $env:OPENAI_API_KEY="sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" ; uvicorn main:app --reload
+   -------------------------------------
+
+7. Start the backend:
+   uvicorn main:app --reload
+
+➡️ Backend will be available at: http://127.0.0.1:8000
+
+🧑‍🎨 Frontend Setup (Next.js)
+-----------------------------
+
+1. Open a new terminal and navigate to the root folder:
+   cd "C:\Users\<your_username>\OneDrive\Documents\UTDallas\Spring 2025\CS 6320\cs6320_project"
+
+2. Create the Next.js app:
+   npx create-next-app@latest frontend --typescript --app
+
+   Choose:
+   - Tailwind CSS: Yes
+   - src/: No
+   - Turbopack: No
+   - Customize aliases: No
+
+3. Move into the app and install Axios:
+   cd frontend
+   npm install axios
+
+4. Replace the content in `app/page.tsx` with this chat UI code:
+
+   (provided separately or copy-paste from setup guide)
+
+5. Start the frontend:
+   npm run dev
+
+➡️ Frontend will be available at: http://localhost:3000
+
+✅ You can now ask questions from the browser, and they’ll be answered using the local Python docs.
+
+🧼 Optional (Fix LangChain Warnings)
+------------------------------------
+To remove LangChain deprecation warnings, update your imports in `main.py`:
+
+- from langchain.embeddings → from langchain_openai import OpenAIEmbeddings
+- from langchain.chat_models → from langchain_openai import ChatOpenAI
+
+Also install the updated package:
+   pip install -U langchain-openai
+
+🧠 Tip: Your backend already includes memory to track conversation history.
+

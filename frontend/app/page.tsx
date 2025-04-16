@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaRobot, FaUser, FaImage, FaTimes, FaTrashAlt } from 'react-icons/fa';
+import { FaRobot, FaUser, FaImage, FaTimes, FaTrashAlt, FaArrowDown } from 'react-icons/fa';
 
 interface Message {
   sender: 'user' | 'bot';
@@ -17,19 +17,37 @@ interface ChatSession {
 }
 
 export default function Home() {
-  const [sessions, setSessions] = useState<ChatSession[]>([
-    { title: 'New Chat', messages: [] }
-  ]);
+  const [sessions, setSessions] = useState<ChatSession[]>([{ title: 'New Chat', messages: [] }]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [question, setQuestion] = useState('');
   const [loading, setLoading] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const [typingIndicator, setTypingIndicator] = useState('');
   const [pastedImages, setPastedImages] = useState<File[]>([]);
+  const [showScrollToBottom, setShowScrollToBottom] = useState(false);
+
+  const chatScrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode);
   }, [darkMode]);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [sessions, loading]);
+
+  const scrollToBottom = () => {
+    if (chatScrollRef.current) {
+      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+    }
+  };
+
+  const handleScroll = () => {
+    if (chatScrollRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = chatScrollRef.current;
+      setShowScrollToBottom(scrollTop + clientHeight < scrollHeight - 100);
+    }
+  };
 
   const ask = async () => {
     if (!question.trim() && pastedImages.length === 0) return;
@@ -45,9 +63,8 @@ export default function Home() {
       let res;
       if (pastedImages.length > 0) {
         const formData = new FormData();
-        pastedImages.forEach((file, i) => formData.append('file', file, file.name));
+        pastedImages.forEach((file) => formData.append('file', file, file.name));
         formData.append('question', question);
-
         res = await axios.post('http://127.0.0.1:8000/ask-image', formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
         });
@@ -105,120 +122,114 @@ export default function Home() {
   }, []);
 
   return (
-    <main
-      className={`h-screen flex font-sans transition-colors duration-300 ${
-        darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'
-      } relative overflow-hidden`}
-    >
+    <main className={`min-h-screen w-full flex flex-col font-sans transition-colors duration-300 overflow-y-auto ${darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'} relative`}>
       <div className="absolute inset-0 -z-10">
         <div className="animated-bg h-full w-full"></div>
       </div>
 
-      <div className={`w-60 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-r'} border-r p-4 space-y-3 shadow-sm`}>
-        <h2 className="text-lg font-semibold text-blue-600 flex items-center gap-2">💬 Chats</h2>
-        {sessions.map((s, i) => (
+      <div className="flex flex-1 overflow-hidden">
+        <div className={`w-60 h-full ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-r'} border-r p-4 space-y-3 shadow-sm overflow-y-auto`}>
+          <h2 className="text-lg font-semibold text-blue-600 flex items-center gap-2">💬 Chats</h2>
+          {sessions.map((s, i) => (
+            <button
+              key={i}
+              onClick={() => setActiveIndex(i)}
+              className={`block w-full text-left px-3 py-2 rounded-md text-sm font-medium transition-all ${i === activeIndex ? 'bg-blue-500 text-white scale-105 dark:bg-blue-400 dark:text-gray-900' : 'hover:bg-gray-100 hover:scale-[1.01] dark:text-gray-300 dark:hover:bg-gray-700'}`}
+            >
+              {s.title || `Chat ${i + 1}`}
+            </button>
+          ))}
           <button
-            key={i}
-            onClick={() => setActiveIndex(i)}
-            className={`block w-full text-left px-3 py-2 rounded-md text-sm font-medium transition-all ${
-              i === activeIndex
-                ? 'bg-blue-500 text-white scale-105 dark:bg-blue-400 dark:text-gray-900'
-                : 'hover:bg-gray-100 hover:scale-[1.01] dark:text-gray-300 dark:hover:bg-gray-700'
-            }`}
+            onClick={() => {
+              setSessions([...sessions, { title: `Chat ${sessions.length + 1}`, messages: [] }]);
+              setActiveIndex(sessions.length);
+            }}
+            className={`w-full text-sm mt-4 flex items-center gap-1 underline font-medium ${darkMode ? 'text-blue-200 hover:text-white' : 'text-blue-600 hover:text-blue-800'}`}
           >
-            {s.title || `Chat ${i + 1}`}
+            <span className="text-lg">➕</span> <span>New Chat</span>
           </button>
-        ))}
-        <button
-          onClick={() => {
-            setSessions([...sessions, { title: `Chat ${sessions.length + 1}`, messages: [] }]);
-            setActiveIndex(sessions.length);
-          }}
-          className={`w-full text-sm mt-4 flex items-center gap-1 underline font-medium ${
-            darkMode ? 'text-blue-200 hover:text-white' : 'text-blue-600 hover:text-blue-800'
-          }`}
-        >
-          <span className="text-lg">➕</span> <span>New Chat</span>
-        </button>
-        <button
-          onClick={() => setDarkMode(!darkMode)}
-          className="mt-6 w-full text-sm text-blue-500 underline hover:text-blue-700"
-        >
-          Toggle {darkMode ? 'Light' : 'Dark'} Mode
-        </button>
-      </div>
+          <button
+            onClick={() => setDarkMode(!darkMode)}
+            className="mt-6 w-full text-sm text-blue-500 underline hover:text-blue-700"
+          >
+            Toggle {darkMode ? 'Light' : 'Dark'} Mode
+          </button>
+        </div>
 
-      <div className="flex-1 p-6 flex flex-col items-center h-[calc(100vh-2rem)]" onDragOver={e => e.preventDefault()} onDrop={e => {
-        e.preventDefault();
-        const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image'));
-        setPastedImages(prev => [...prev, ...files]);
-      }}>
-        <div className={`w-full max-w-2xl shadow-xl rounded-2xl p-6 flex flex-col flex-grow ${darkMode ? 'bg-gray-800/80 backdrop-blur-sm' : 'bg-white/80 backdrop-blur-sm'} transition-all duration-300`}>
-          <h1 className="text-3xl font-bold text-blue-500 mb-6 flex items-center gap-2 animate-fade-in">
-            <span>Ask me about Python Docs</span>
-          </h1>
-
-          {pastedImages.length > 0 && (
-            <div className="flex flex-wrap gap-3 mb-4">
-              {pastedImages.map((file, i) => (
-                <div key={i} className="relative">
-                  <img
-                    src={URL.createObjectURL(file)}
-                    alt={`pasted-${i}`}
-                    className="w-24 h-24 object-cover rounded border shadow"
-                  />
-                  <div className="absolute bottom-0 left-0 bg-black bg-opacity-60 text-white text-[10px] px-1 truncate w-full">
-                    {file.name}
-                  </div>
-                  <button
-                    onClick={() => removeImage(i)}
-                    className="absolute top-0 right-0 bg-black bg-opacity-50 text-white rounded-bl px-1 py-0.5 text-xs"
-                  >
-                    <FaTimes />
-                  </button>
-                </div>
-              ))}
-              <button
-                onClick={clearAllImages}
-                className="text-sm flex items-center gap-1 px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600"
-              >
-                <FaTrashAlt /> Clear All
-              </button>
+        <div className="flex-1 h-full flex flex-col">
+          <div className={`w-full max-w-4xl mx-auto flex flex-col flex-grow ${darkMode ? 'bg-gray-800/80 backdrop-blur-sm' : 'bg-white/80 backdrop-blur-sm'} transition-all duration-300`}>
+            <div className="px-6 pt-6">
+              <h1 className="text-3xl font-bold text-blue-500 mb-6 flex items-center gap-2 animate-fade-in">
+                <span>Ask me about Python Docs</span>
+              </h1>
             </div>
-          )}
 
-          <div className="space-y-4 flex-grow overflow-y-auto pr-2 mb-4">
-            <AnimatePresence>
-              {sessions[activeIndex].messages.map((msg, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.2 }}
-                  className={`p-3 rounded-lg w-fit max-w-[80%] ${
-                    msg.sender === 'user' ? 'bg-blue-100 self-end ml-auto text-black' : darkMode ? 'bg-gray-700 text-white' : 'bg-gray-100 text-black'
-                  }`}
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    {msg.sender === 'user' ? <FaUser /> : <FaRobot />} <span className="text-xs opacity-70">{msg.sender}</span>
+            {pastedImages.length > 0 && (
+              <div className="flex flex-wrap gap-3 px-6">
+                {pastedImages.map((file, i) => (
+                  <div key={i} className="relative">
+                    <img src={URL.createObjectURL(file)} alt={`pasted-${i}`} className="w-24 h-24 object-cover rounded border shadow" />
+                    <div className="absolute bottom-0 left-0 bg-black bg-opacity-60 text-white text-[10px] px-1 truncate w-full">
+                      {file.name}
+                    </div>
+                    <button onClick={() => removeImage(i)} className="absolute top-0 right-0 bg-black bg-opacity-50 text-white rounded-bl px-1 py-0.5 text-xs">
+                      <FaTimes />
+                    </button>
                   </div>
-                  <ReactMarkdown>{msg.text}</ReactMarkdown>
-                </motion.div>
-              ))}
-            </AnimatePresence>
-            {loading && <div className="p-3 text-sm">{typingIndicator}...</div>}
+                ))}
+                <button onClick={clearAllImages} className="text-sm flex items-center gap-1 px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600">
+                  <FaTrashAlt /> Clear All
+                </button>
+              </div>
+            )}
+
+            <div
+              ref={chatScrollRef}
+              className="flex-grow overflow-y-scroll px-6 space-y-4 py-4 scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100 focus:outline-none"
+              tabIndex={0}
+              onScroll={handleScroll}
+              style={{ maxHeight: 'calc(100vh - 180px)', outline: 'none' }}
+            >
+              <AnimatePresence>
+                {sessions[activeIndex].messages.map((msg, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2 }}
+                    className={`p-3 rounded-lg w-fit max-w-[80%] ${msg.sender === 'user' ? 'bg-blue-100 self-end ml-auto text-black' : darkMode ? 'bg-gray-700 text-white' : 'bg-gray-100 text-black'}`}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      {msg.sender === 'user' ? <FaUser /> : <FaRobot />} <span className="text-xs opacity-70">{msg.sender}</span>
+                    </div>
+                    <ReactMarkdown>{msg.text}</ReactMarkdown>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+              {loading && <div className="p-3 text-sm">{typingIndicator}...</div>}
+            </div>
+
+            {showScrollToBottom && (
+              <button
+                onClick={scrollToBottom}
+                className="fixed bottom-20 right-10 bg-blue-600 text-white p-2 rounded-full shadow-lg hover:bg-blue-700 z-50"
+              >
+                <FaArrowDown />
+              </button>
+            )}
           </div>
 
-          <div className="flex gap-2 mt-4">
-            <input
-              type="text"
-              className="flex-1 p-3 border rounded-l-lg dark:bg-gray-900"
-              placeholder="Ask something about the image or Python..."
-              value={question}
-              onChange={(e) => setQuestion(e.target.value)}
-              onKeyDown={handleKeyPress}
-            />
+          <div className="w-full max-w-4xl mx-auto px-6 py-4 flex gap-2 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 sticky bottom-0">
+          <input
+            type="text"
+            className="flex-1 p-3 border rounded-l-lg bg-white text-black dark:bg-gray-800 dark:text-white"
+            placeholder="Ask something about the image or Python..."
+            value={question}
+            onChange={(e) => setQuestion(e.target.value)}
+            onKeyDown={handleKeyPress}
+          />
+
             <label className="bg-gray-200 hover:bg-gray-300 cursor-pointer flex items-center p-3 rounded">
               <FaImage />
               <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />

@@ -31,7 +31,7 @@ cs6320_project/
    venv\Scripts\activate
 
 4. Install required dependencies:
-   pip install fastapi uvicorn langchain langchain-openai openai faiss-cpu python-dotenv load_dotenv
+   pip install fastapi uvicorn langchain langchain-openai openai faiss-cpu python-dotenv load_dotenv pytesseract pillow python-multipart
 
 5. Place your ZIP file `python-3.13-docs-text.zip` inside the `backend/` folder.
 
@@ -49,6 +49,23 @@ cs6320_project/
    PowerShell:
    -------------------------------------
    $env:OPENAI_API_KEY="sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" ; uvicorn main:app --reload
+
+   Now for this project, please downgrade your numpy version, numpy 2.0 will cause error
+   install numpy using this command: -> "pip install "numpy<2.0"
+   
+   make sure you download tesseract using this link https://github.com/UB-Mannheim/tesseract/wiki
+      import this into your main.py 
+      import pytesseract
+      pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+      after downloading, make sure you add the tesseract path to your system variable 
+      Press Windows + S, search for "Environment Variables"
+      Click "Edit the system environment variables"
+      In the System Properties window, click "Environment Variables..."
+      Under System variables, scroll and select Path, then click Edit
+      In the window that opens, click New
+      Paste this path C:\Program Files\Tesseract-OCR\
+      open your terminal and verify the path by command "tesseract --version
+
    -------------------------------------
 
 7. Start the backend:
@@ -97,4 +114,17 @@ Also install the updated package:
    pip install -U langchain-openai
 
 🧠 Tip: Your backend already includes memory to track conversation history.
+
+
+
+after you have finished setting these up: 
+- Make sure to have two terminal
+   - one terminal with backend directory running this command: 
+      - $env:OPENAI_API_KEY="sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" ; uvicorn main:app --reload
+   - one terminal with front end directory npm run dev 
+
+- the local link will be: http://localhost:3000
+- network link: http://192.168.1.230:3000
+- you can go to any link and try out the bot
+
 

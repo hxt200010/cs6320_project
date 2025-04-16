@@ -1,10 +1,14 @@
-# backend/main.py
-from fastapi import FastAPI
+from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import os
 import zipfile
 from dotenv import load_dotenv
+from PIL import Image
+import pytesseract
+pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+
+from io import BytesIO
 
 from langchain.docstore.document import Document
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -54,7 +58,7 @@ vectorstore = FAISS.from_documents(split_docs, embeddings)
 retriever = vectorstore.as_retriever(search_kwargs={"k": 4})
 
 # Set up conversational memory
-llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0)
+llm = ChatOpenAI(model_name="gpt-4o", temperature=0)
 memory = ConversationBufferMemory(
     memory_key="chat_history",
     return_messages=True,
@@ -69,15 +73,35 @@ qa_chain = ConversationalRetrievalChain.from_llm(
     output_key="answer"
 )
 
-# Request schema
+# Original Request schema
 class Query(BaseModel):
     question: str
 
-# Endpoint for asking questions
+# Original endpoint for asking questions (unchanged)
 @app.post("/ask")
 async def ask_question(query: Query):
     result = qa_chain({"question": query.question})
     return {
         "answer": result["answer"],
+        "sources": [doc.metadata["source"] for doc in result["source_documents"]]
+    }
+
+# --- New functionality starts here ---
+
+# New endpoint for handling image uploads independently
+@app.post("/ask-image")
+async def ask_image(file: UploadFile = File(...)):
+    image_bytes = await file.read()
+    image = Image.open(BytesIO(image_bytes))
+    
+    # Perform OCR using pytesseract
+    extracted_text = pytesseract.image_to_string(image)
+
+    # Ask QA chain using extracted text from image
+    result = qa_chain({"question": extracted_text})
+
+    return {
+        "answer": result["answer"],
+        "extracted_text": extracted_text,  # optionally returning OCR result
         "sources": [doc.metadata["source"] for doc in result["source_documents"]]
     }

@@ -57,7 +57,7 @@ export default function Home() {
     updatedSessions[activeIndex].messages.push(userMessage);
     setSessions(updatedSessions);
     setLoading(true);
-    setTypingIndicator('GPT is thinking...');
+    setTypingIndicator('hmmmmmm...');
 
     try {
       let res;
@@ -160,7 +160,7 @@ export default function Home() {
           <div className={`w-full max-w-4xl mx-auto flex flex-col flex-grow ${darkMode ? 'bg-gray-800/80 backdrop-blur-sm' : 'bg-white/80 backdrop-blur-sm'} transition-all duration-300`}>
             <div className="px-6 pt-6">
               <h1 className="text-3xl font-bold text-blue-500 mb-6 flex items-center gap-2 animate-fade-in">
-                <span>Ask me about Python Docs</span>
+                <span>Python helper</span>
               </h1>
             </div>
 
@@ -224,7 +224,7 @@ export default function Home() {
           <input
             type="text"
             className="flex-1 p-3 border rounded-l-lg bg-white text-black dark:bg-gray-800 dark:text-white"
-            placeholder="Ask something about the image or Python..."
+            placeholder="Ask something about Python or paste images here"
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
             onKeyDown={handleKeyPress}

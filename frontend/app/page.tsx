@@ -25,7 +25,7 @@ export default function Home() {
   const [typingIndicator, setTypingIndicator] = useState('');
   const [pastedImages, setPastedImages] = useState<File[]>([]);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
-
+  const isAsking = useRef(false);
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -50,7 +50,8 @@ export default function Home() {
   };
 
   const ask = async () => {
-    if (!question.trim() && pastedImages.length === 0) return;
+    if (loading || isAsking.current || (!question.trim() && pastedImages.length === 0)) return;
+    isAsking.current = true;
 
     const userMessage: Message = { sender: 'user', text: pastedImages.length ? `🖼️ + ${question}` : question };
     const updatedSessions = [...sessions];
@@ -58,44 +59,68 @@ export default function Home() {
     setSessions(updatedSessions);
     setLoading(true);
     setTypingIndicator('hmmmmmm...');
-
+    const chatId = `chat-${activeIndex}`;
+    let res;
     try {
-      let res;
+      
+      
       if (pastedImages.length > 0) {
         const formData = new FormData();
         pastedImages.forEach((file) => formData.append('file', file, file.name));
+        
         formData.append('question', question);
-        res = await axios.post('http://127.0.0.1:8000/ask-image', formData, {
+        res = await axios.post(`http://127.0.0.1:8000/ask-image?chat_id=${chatId}`, formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
         });
       } else {
-        res = await axios.post('http://127.0.0.1:8000/ask', { question });
+        res = await axios.post(`http://127.0.0.1:8000/ask?chat_id=${chatId}`, { question });
       }
 
-      const botMessage: Message = { sender: 'bot', text: res.data.answer };
+      const botMessage: Message = { sender: 'bot', text: '' };
       updatedSessions[activeIndex].messages.push(botMessage);
-      if (res.data.answer.length > 40) {
-        updatedSessions[activeIndex].title = res.data.answer.split(/[.?!\n]/)[0].slice(0, 40);
-      }
       setSessions([...updatedSessions]);
+
+      const fullText = res.data.answer;
+      let charIndex = 0;
+
+      const typeNextChar = () => {
+        if (charIndex < fullText.length) {
+          updatedSessions[activeIndex].messages[updatedSessions[activeIndex].messages.length - 1].text += fullText[charIndex];
+          setSessions([...updatedSessions]);
+          charIndex++;
+          setTimeout(typeNextChar, 10);
+        } else {
+          if (fullText.length > 40) {
+            updatedSessions[activeIndex].title = fullText.split(/[.?!\n]/)[0].slice(0, 40);
+            setSessions([...updatedSessions]);
+          }
+          setLoading(false);
+          setTypingIndicator('');
+          isAsking.current = false;
+        }
+      };
+
+      typeNextChar();
+
     } catch (err) {
       updatedSessions[activeIndex].messages.push({ sender: 'bot', text: '❌ Something went wrong.' });
       setSessions([...updatedSessions]);
+      setLoading(false);
+      setTypingIndicator('');
+      isAsking.current = false;
     }
 
     setQuestion('');
     setPastedImages([]);
-    setLoading(false);
-    setTypingIndicator('');
   };
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') ask();
+    if (e.key === 'Enter' && !loading && !isAsking.current) ask();
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) setPastedImages(prev => [...prev, file]);
+    if (file) setPastedImages((prev) => [...prev, file]);
   };
 
   const handlePaste = (e: ClipboardEvent) => {
@@ -104,14 +129,14 @@ export default function Home() {
       for (let item of items) {
         if (item.type.startsWith('image')) {
           const file = item.getAsFile();
-          if (file) setPastedImages(prev => [...prev, file]);
+          if (file) setPastedImages((prev) => [...prev, file]);
         }
       }
     }
   };
 
   const removeImage = (index: number) => {
-    setPastedImages(prev => prev.filter((_, i) => i !== index));
+    setPastedImages((prev) => prev.filter((_, i) => i !== index));
   };
 
   const clearAllImages = () => setPastedImages([]);
@@ -122,145 +147,106 @@ export default function Home() {
   }, []);
 
   return (
-    <main className={`min-h-screen w-full flex flex-col font-sans transition-colors duration-300 overflow-y-auto ${darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'} relative`}>
-      <div className="absolute inset-0 -z-10">
-        <div className="animated-bg h-full w-full"></div>
+    <main className={`min-h-screen w-full flex flex-col md:flex-row font-sans transition-colors duration-500 ${darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'} overflow-hidden`}>
+      <div className={`md:w-64 h-screen overflow-y-auto p-4 border-r ${darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'} sticky top-0`}>
+        <h2 className="text-lg font-bold text-blue-400 mb-4">💬 Chats</h2>
+        {sessions.map((s, i) => (
+          <button
+            key={i}
+            onClick={() => setActiveIndex(i)}
+            className={`w-full text-left px-4 py-2 rounded-md mb-2 transition-all ${i === activeIndex ? 'bg-blue-500 text-white' : darkMode ? 'hover:bg-gray-700 text-white' : 'hover:bg-gray-100 text-black'}`}
+          >
+            {s.title || `Chat ${i + 1}`}
+          </button>
+        ))}
+        <button onClick={() => {
+          setSessions([...sessions, { title: `Chat ${sessions.length + 1}`, messages: [] }]);
+          setActiveIndex(sessions.length);
+        }} className="w-full py-2 mt-4 text-blue-400 hover:text-blue-300 underline">
+          ➕ New Chat
+        </button>
+        <button onClick={() => setDarkMode(!darkMode)} className="w-full mt-6 py-2 text-blue-400 hover:text-blue-300 underline">
+          Toggle {darkMode ? 'Light' : 'Dark'} Mode
+        </button>
       </div>
 
-      <div className="flex flex-1 overflow-hidden">
-        <div className={`w-60 h-full ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-r'} border-r p-4 space-y-3 shadow-sm overflow-y-auto`}>
-          <h2 className="text-lg font-semibold text-blue-600 flex items-center gap-2">💬 Chats</h2>
-          {sessions.map((s, i) => (
-            <button
-              key={i}
-              onClick={() => setActiveIndex(i)}
-              className={`block w-full text-left px-3 py-2 rounded-md text-sm font-medium transition-all ${i === activeIndex ? 'bg-blue-500 text-white scale-105 dark:bg-blue-400 dark:text-gray-900' : 'hover:bg-gray-100 hover:scale-[1.01] dark:text-gray-300 dark:hover:bg-gray-700'}`}
-            >
-              {s.title || `Chat ${i + 1}`}
-            </button>
-          ))}
-          <button
-            onClick={() => {
-              setSessions([...sessions, { title: `Chat ${sessions.length + 1}`, messages: [] }]);
-              setActiveIndex(sessions.length);
-            }}
-            className={`w-full text-sm mt-4 flex items-center gap-1 underline font-medium ${darkMode ? 'text-blue-200 hover:text-white' : 'text-blue-600 hover:text-blue-800'}`}
-          >
-            <span className="text-lg">➕</span> <span>New Chat</span>
-          </button>
-          <button
-            onClick={() => setDarkMode(!darkMode)}
-            className="mt-6 w-full text-sm text-blue-500 underline hover:text-blue-700"
-          >
-            Toggle {darkMode ? 'Light' : 'Dark'} Mode
-          </button>
+      <div className="flex-1 flex flex-col h-screen overflow-hidden">
+        <div className={`sticky top-0 z-10 px-4 py-4 shadow ${darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}`}>
+          <h1 className="text-3xl font-bold text-blue-500 dark:text-blue-300 text-center">
+            Anything I can help with Python? <span className="text-yellow-400">😊</span>
+          </h1>
         </div>
 
-        <div className="flex-1 h-full flex flex-col">
-          <div className={`w-full max-w-4xl mx-auto flex flex-col flex-grow ${darkMode ? 'bg-gray-800/80 backdrop-blur-sm' : 'bg-white/80 backdrop-blur-sm'} transition-all duration-300`}>
-            <div className="px-6 pt-6">
-              <h1 className="text-3xl font-bold text-blue-500 mb-6 flex items-center gap-2 animate-fade-in">
-                <span>Python helper</span>
-              </h1>
-            </div>
-
-            {pastedImages.length > 0 && (
-              <div className="flex flex-wrap gap-3 px-6">
-                {pastedImages.map((file, i) => (
-                  <div key={i} className="relative">
-                    <img src={URL.createObjectURL(file)} alt={`pasted-${i}`} className="w-24 h-24 object-cover rounded border shadow" />
-                    <div className="absolute bottom-0 left-0 bg-black bg-opacity-60 text-white text-[10px] px-1 truncate w-full">
-                      {file.name}
-                    </div>
-                    <button onClick={() => removeImage(i)} className="absolute top-0 right-0 bg-black bg-opacity-50 text-white rounded-bl px-1 py-0.5 text-xs">
-                      <FaTimes />
-                    </button>
-                  </div>
-                ))}
-                <button onClick={clearAllImages} className="text-sm flex items-center gap-1 px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600">
-                  <FaTrashAlt /> Clear All
+        {pastedImages.length > 0 && (
+          <div className="flex flex-wrap gap-4 px-6 py-2">
+            {pastedImages.map((file, i) => (
+              <div key={i} className="relative rounded shadow overflow-hidden">
+                <img src={URL.createObjectURL(file)} className="w-24 h-24 object-cover" />
+                <div className="absolute bottom-0 left-0 bg-black bg-opacity-70 text-white text-xs px-1 truncate w-full">{file.name}</div>
+                <button onClick={() => removeImage(i)} className="absolute top-0 right-0 bg-red-500 text-white text-xs px-1 py-0.5 rounded-bl">
+                  <FaTimes />
                 </button>
               </div>
-            )}
-
-            <div
-              ref={chatScrollRef}
-              className="flex-grow overflow-y-scroll px-6 space-y-4 py-4 scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100 focus:outline-none"
-              tabIndex={0}
-              onScroll={handleScroll}
-              style={{ maxHeight: 'calc(100vh - 180px)', outline: 'none' }}
-            >
-              <AnimatePresence>
-                {sessions[activeIndex].messages.map((msg, i) => (
-                  <motion.div
-                    key={i}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.2 }}
-                    className={`p-3 rounded-lg w-fit max-w-[80%] ${msg.sender === 'user' ? 'bg-blue-100 self-end ml-auto text-black' : darkMode ? 'bg-gray-700 text-white' : 'bg-gray-100 text-black'}`}
-                  >
-                    <div className="flex items-center gap-2 mb-1">
-                      {msg.sender === 'user' ? <FaUser /> : <FaRobot />} <span className="text-xs opacity-70">{msg.sender}</span>
-                    </div>
-                    <ReactMarkdown>{msg.text}</ReactMarkdown>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-              {loading && <div className="p-3 text-sm">{typingIndicator}...</div>}
-            </div>
-
-            {showScrollToBottom && (
-              <button
-                onClick={scrollToBottom}
-                className="fixed bottom-20 right-10 bg-blue-600 text-white p-2 rounded-full shadow-lg hover:bg-blue-700 z-50"
-              >
-                <FaArrowDown />
-              </button>
-            )}
+            ))}
+            <button onClick={clearAllImages} className="text-sm flex items-center gap-1 px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600">
+              <FaTrashAlt /> Clear All
+            </button>
           </div>
+        )}
 
-          <div className="w-full max-w-4xl mx-auto px-6 py-4 flex gap-2 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 sticky bottom-0">
+        <div ref={chatScrollRef} onScroll={handleScroll} className="flex-grow overflow-y-scroll px-6 space-y-4 py-4 pb-40">
+          <AnimatePresence>
+            {sessions[activeIndex].messages.map((msg, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+                className={`px-4 py-3 rounded-xl shadow-md max-w-[80%] whitespace-pre-line ${msg.sender === 'user'
+                  ? darkMode
+                    ? 'bg-gray-700 text-white self-end ml-auto'
+                    : 'bg-blue-100 text-black self-end ml-auto'
+                  : darkMode
+                    ? 'bg-gray-800 text-white self-start ml-0'
+                    : 'bg-gray-100 text-black self-start ml-0'}`}
+              >
+                <div className={`flex items-center gap-2 mb-1 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                  {msg.sender === 'user' ? <FaUser /> : <FaRobot />} <span>{msg.sender}</span>
+                </div>
+                <ReactMarkdown>{msg.text}</ReactMarkdown>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+          {loading && <div className={`p-3 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{typingIndicator}...</div>}
+        </div>
+
+        {showScrollToBottom && (
+          <button onClick={scrollToBottom} className="fixed bottom-20 right-10 bg-blue-600 text-white p-2 rounded-full shadow-lg hover:bg-blue-700">
+            <FaArrowDown />
+          </button>
+        )}
+      </div>
+
+      <div className={`w-full fixed bottom-0 left-0 right-0 ${darkMode ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'} border-t`}>
+        <div className="max-w-4xl mx-auto px-6 py-4 flex gap-2">
           <input
             type="text"
-            className="flex-1 p-3 border rounded-l-lg bg-white text-black dark:bg-gray-800 dark:text-white"
-            placeholder="Ask something about Python or paste images here"
+            className={`flex-1 p-3 rounded-l-full border ${darkMode ? 'border-gray-600 bg-gray-800 text-white' : 'border-gray-300 bg-white text-black'} focus:ring-2 focus:ring-blue-500`}
+            placeholder="💬 Ask me something about Python..."
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
             onKeyDown={handleKeyPress}
           />
-
-            <label className="bg-gray-200 hover:bg-gray-300 cursor-pointer flex items-center p-3 rounded">
-              <FaImage />
-              <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
-            </label>
-            <button className="bg-blue-600 text-white px-5 rounded-r-lg" onClick={ask} disabled={loading}>
-              Ask
-            </button>
-          </div>
+          <label className={`${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'} cursor-pointer flex items-center px-4 rounded`}>
+            <FaImage />
+            <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
+          </label>
+          <button className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2 rounded-r-full shadow" onClick={ask} disabled={loading}>
+            Ask
+          </button>
         </div>
       </div>
-
-      <style jsx>{`
-        .animated-bg {
-          position: absolute;
-          top: 0;
-          left: 0;
-          z-index: -1;
-          height: 100%;
-          width: 100%;
-          background: linear-gradient(-45deg, #87CEFA, #8A2BE2, #00BFFF, #7B68EE);
-          background-size: 400% 400%;
-          animation: gradientAnimation 20s ease infinite;
-          opacity: 0.3;
-          pointer-events: none;
-        }
-        @keyframes gradientAnimation {
-          0% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-          100% { background-position: 0% 50%; }
-        }
-      `}</style>
     </main>
   );
 }

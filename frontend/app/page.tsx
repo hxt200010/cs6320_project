@@ -9,7 +9,9 @@ import { FaRobot, FaUser, FaImage, FaTimes, FaTrashAlt, FaArrowDown } from 'reac
 interface Message {
   sender: 'user' | 'bot';
   text: string;
+  images?: string[]; // base64 or blob URLs
 }
+
 
 interface ChatSession {
   title: string;
@@ -27,6 +29,8 @@ export default function Home() {
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const isAsking = useRef(false);
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
+  const [modalImage, setModalImage] = useState<string | null>(null);
+
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode);
@@ -53,7 +57,14 @@ export default function Home() {
     if (loading || isAsking.current || (!question.trim() && pastedImages.length === 0)) return;
     isAsking.current = true;
 
-    const userMessage: Message = { sender: 'user', text: pastedImages.length ? `🖼️ + ${question}` : question };
+    const imageURLs = pastedImages.map((file) => URL.createObjectURL(file));
+    const userMessage: Message = {
+      sender: 'user',
+      text: question,
+      images: imageURLs,
+    };
+    
+
     const updatedSessions = [...sessions];
     updatedSessions[activeIndex].messages.push(userMessage);
     setSessions(updatedSessions);
@@ -214,7 +225,29 @@ export default function Home() {
                 <div className={`flex items-center gap-2 mb-1 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                   {msg.sender === 'user' ? <FaUser /> : <FaRobot />} <span>{msg.sender}</span>
                 </div>
-                <ReactMarkdown>{msg.text}</ReactMarkdown>
+                {msg.images?.map((src, idx) => (
+  <img
+    key={idx}
+    src={src}
+    alt={`uploaded-${idx}`}
+    onClick={() => setModalImage(src)}
+    className="cursor-pointer max-w-xs max-h-40 rounded mb-2 hover:brightness-110 transition"
+  />
+))}
+
+                <ReactMarkdown
+  components={{
+    img: ({ node, ...props }) => (
+      <img
+        {...props}
+        onClick={() => setModalImage(props.src || '')}
+        className="cursor-pointer max-w-xs max-h-40 rounded hover:brightness-110 transition"
+      />
+    ),
+  }}
+>
+  {msg.text}
+</ReactMarkdown>
               </motion.div>
             ))}
           </AnimatePresence>
@@ -238,15 +271,22 @@ export default function Home() {
             onChange={(e) => setQuestion(e.target.value)}
             onKeyDown={handleKeyPress}
           />
-          <label className={`${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'} cursor-pointer flex items-center px-4 rounded`}>
-            <FaImage />
-            <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
+          <label className={`${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'} cursor-pointer flex items-center gap-2 px-4 py-2 rounded border shadow-sm hover:bg-opacity-80`}>
+          <FaImage className="text-lg" />
+  <span className="text-sm font-medium"> Browse</span>
+  <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
           </label>
           <button className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2 rounded-r-full shadow" onClick={ask} disabled={loading}>
             Ask
           </button>
         </div>
       </div>
+      {modalImage && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-80" onClick={() => setModalImage(null)}>
+    <img src={modalImage} alt="Preview" className="max-w-full max-h-full rounded-lg shadow-lg border" />
+  </div>
+)}
+
     </main>
   );
 }

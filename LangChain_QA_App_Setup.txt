@@ -28,10 +28,12 @@ cs6320_project/
 
 3. Set up virtual environment:
    python -m venv venv
-   venv\Scripts\activate
+   Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process
+
+   .\venv\Scripts\activate
 
 4. Install required dependencies:
-   pip install fastapi uvicorn langchain langchain-openai openai faiss-cpu python-dotenv load_dotenv pytesseract pillow python-multipart
+   pip install fastapi uvicorn langchain langchain-openai openai faiss-cpu python-dotenv load_dotenv langchain-community pytesseract pillow python-multipart
 
 5. Place your ZIP file `python-3.13-docs-text.zip` inside the `backend/` folder.
 

@@ -30,6 +30,10 @@ export default function Home() {
   const isAsking = useRef(false);
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
   const [modalImage, setModalImage] = useState<string | null>(null);
+  const [abortController, setAbortController] = useState<AbortController | null>(null);
+  const charIndexRef = useRef(0);
+  const shouldStopRef = useRef(false);
+  
 
 
   useEffect(() => {
@@ -56,13 +60,17 @@ export default function Home() {
   const ask = async () => {
     if (loading || isAsking.current || (!question.trim() && pastedImages.length === 0)) return;
     isAsking.current = true;
-
+    shouldStopRef.current = false;
+    const controller = new AbortController();
+    setAbortController(controller);
+  
     const imageURLs = pastedImages.map((file) => URL.createObjectURL(file));
     const userMessage: Message = {
       sender: 'user',
       text: question,
       images: imageURLs,
     };
+    const isNewChat = sessions[activeIndex].messages.length === 0;
     
 
     const updatedSessions = [...sessions];
@@ -84,7 +92,9 @@ export default function Home() {
           headers: { 'Content-Type': 'multipart/form-data' },
         });
       } else {
-        res = await axios.post(`http://127.0.0.1:8000/ask?chat_id=${chatId}`, { question });
+        res = await axios.post(`http://127.0.0.1:8000/ask?chat_id=${chatId}`, { question }, {
+          signal: controller.signal,
+        });
       }
 
       const botMessage: Message = { sender: 'bot', text: '' };
@@ -92,33 +102,56 @@ export default function Home() {
       setSessions([...updatedSessions]);
 
       const fullText = res.data.answer;
-      let charIndex = 0;
+      charIndexRef.current = 0;
 
       const typeNextChar = () => {
-        if (charIndex < fullText.length) {
-          updatedSessions[activeIndex].messages[updatedSessions[activeIndex].messages.length - 1].text += fullText[charIndex];
+        if (shouldStopRef.current) {
+          updatedSessions[activeIndex].messages[updatedSessions[activeIndex].messages.length - 1].text += '⏹️ Stopped.';
           setSessions([...updatedSessions]);
-          charIndex++;
-          setTimeout(typeNextChar, 10);
+          setLoading(false);
+          setTypingIndicator('');
+          isAsking.current = false;
+          return;
+        }
+  
+        if (charIndexRef.current < fullText.length) {
+          updatedSessions[activeIndex].messages[updatedSessions[activeIndex].messages.length - 1].text += fullText[charIndexRef.current];
+          setSessions([...updatedSessions]);
+          charIndexRef.current++;
+          setTimeout(typeNextChar, 9.5);
         } else {
-          if (fullText.length > 40) {
-            updatedSessions[activeIndex].title = fullText.split(/[.?!\n]/)[0].slice(0, 40);
+          if (
+            isNewChat &&
+            (!updatedSessions[activeIndex].title ||
+              updatedSessions[activeIndex].title.startsWith('New Chat') ||
+              updatedSessions[activeIndex].title.startsWith('Chat '))
+          ) {
+            const userPrompt = question.trim();
+            const trimmed = userPrompt.split(/[.?!\n]/)[0].trim();
+            const maxLength = 40;
+            updatedSessions[activeIndex].title = trimmed.length > maxLength ? trimmed.slice(0, maxLength) + '…' : trimmed;
             setSessions([...updatedSessions]);
           }
           setLoading(false);
           setTypingIndicator('');
           isAsking.current = false;
+          setAbortController(null);
         }
       };
 
       typeNextChar();
 
-    } catch (err) {
-      updatedSessions[activeIndex].messages.push({ sender: 'bot', text: '❌ Something went wrong.' });
+    } catch (err: unknown) {
+      if (axios.isCancel(err) || (err as Error).name === 'CanceledError') {
+        updatedSessions[activeIndex].messages.push({ sender: 'bot', text: '⏹️ Response stopped.' });
+      } else {
+        updatedSessions[activeIndex].messages.push({ sender: 'bot', text: '❌ Something went wrong.' });
+      }
       setSessions([...updatedSessions]);
       setLoading(false);
       setTypingIndicator('');
       isAsking.current = false;
+      setAbortController(null);
     }
 
     setQuestion('');
@@ -259,6 +292,23 @@ export default function Home() {
             <FaArrowDown />
           </button>
         )}
+
+            {/* ✅ INSERTED Stop Button Here */}
+    {loading && (
+      <button
+        onClick={() => {
+          shouldStopRef.current = true;
+          if (abortController) abortController.abort();
+          setAbortController(null);
+          setLoading(false);
+          setTypingIndicator('');
+          isAsking.current = false;
+        }}
+        className="fixed bottom-28 right-10 bg-red-600 text-white p-2 rounded-full shadow-lg hover:bg-red-700"
+      >
+        Stop
+      </button>
+    )}
       </div>
 
       <div className={`w-full fixed bottom-0 left-0 right-0 ${darkMode ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'} border-t`}>

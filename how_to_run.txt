@@ -92,6 +92,7 @@ cs6320_project/
 
 3. Move into the app and install Axios:
    cd frontend
+   npm install
    npm install axios
 
 4. Replace the content in `app/page.tsx` with this chat UI code:
